@@ -1,12 +1,9 @@
 // applyFilters.test.js
 import { applyFilters } from './path/to/your/applyFilters';
-import { applySetFilter } from './marginCallGridUtils'; // adjust this path if necessary
+import * as marginCallGridUtils from './marginCallGridUtils'; // adjust this path if necessary
 
-// Mock only the applySetFilter function
-jest.mock('./marginCallGridUtils', () => ({
-  ...jest.requireActual('./marginCallGridUtils'),
-  applySetFilter: jest.fn(),
-}));
+// Mock the applySetFilter function
+jest.mock('./marginCallGridUtils');
 
 describe('applyFilters', () => {
   let selectedMCFavorite, gridRef, applyFiltersIntervalId;
@@ -35,7 +32,7 @@ describe('applyFilters', () => {
     applyFiltersIntervalId = { current: 1234 };
 
     // Ensure applySetFilter mock returns a resolved promise
-    applySetFilter.mockResolvedValue(true);
+    marginCallGridUtils.applySetFilter.mockResolvedValue(true);
 
     // Spy on console log
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -50,7 +47,7 @@ describe('applyFilters', () => {
     await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
 
     expect(console.log).toHaveBeenCalledWith('Calling applySetFilter for key: key1');
-    expect(applySetFilter).toHaveBeenCalledWith(gridRef, 'key1', selectedMCFavorite.state.filterState.key1, expect.any(Object));
+    expect(marginCallGridUtils.applySetFilter).toHaveBeenCalledWith(gridRef, 'key1', selectedMCFavorite.state.filterState.key1, expect.any(Object));
     expect(gridRef.current.api.setFilterModel).toHaveBeenCalledWith(expect.any(Object));
   });
 
@@ -64,7 +61,7 @@ describe('applyFilters', () => {
   });
 
   it('should not clear interval if not all selected values found', async () => {
-    applySetFilter.mockResolvedValueOnce(false);
+    marginCallGridUtils.applySetFilter.mockResolvedValueOnce(false);
 
     await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
 
@@ -74,7 +71,7 @@ describe('applyFilters', () => {
   });
 
   it('should handle errors gracefully', async () => {
-    applySetFilter.mockRejectedValue(new Error('Test error'));
+    marginCallGridUtils.applySetFilter.mockRejectedValue(new Error('Test error'));
 
     await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
 
