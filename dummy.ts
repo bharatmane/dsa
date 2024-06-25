@@ -1,80 +1,55 @@
-// applyFilters.test.js
-import { applyFilters } from './path/to/your/applyFilters';
-import * as marginCallGridUtils from './marginCallGridUtils'; // adjust this path if necessary
+// utils.js
+export const FilterConnectionCondition = {
+  And: 'AND',
+  Or: 'OR'
+};
 
-// Mock the applySetFilter function
-jest.mock('./marginCallGridUtils');
+const isEmpty = (str) => !str || str.length === 0;
 
-describe('applyFilters', () => {
-  let selectedMCFavorite, gridRef, applyFiltersIntervalId;
+export const concatWithCondition = (left, right, condition) => {
+  if (isEmpty(left) && isEmpty(right)) return "/MarginCall/account=''";
+  if (isEmpty(left)) return right;
+  if (isEmpty(right)) return left;
+  const conditionText = condition === FilterConnectionCondition.And ? "and" : "or";
+  return "(" + left + ") " + conditionText + " (" + right + ")";
+};
 
-  beforeEach(() => {
-    selectedMCFavorite = {
-      state: {
-        filterState: {
-          key1: { filterType: 'set', values: ['val1', 'val2'] },
-          key2: { filterType: 'other' }
-        }
-      }
-    };
 
-    gridRef = {
-      current: {
-        api: {
-          setFilterModel: jest.fn(),
-          getColumnFilterInstance: jest.fn().mockResolvedValue({
-            getValues: jest.fn().mockResolvedValue(['val1', 'val2', 'val3'])
-          })
-        }
-      }
-    };
+// utils.test.js
+import { concatWithCondition, FilterConnectionCondition } from './utils';
 
-    applyFiltersIntervalId = { current: 1234 };
-
-    // Ensure applySetFilter mock returns a resolved promise
-    marginCallGridUtils.applySetFilter.mockResolvedValue(true);
-
-    // Spy on console log
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+describe('concatWithCondition', () => {
+  test('returns "/MarginCall/account=\'\'" when both left and right are empty', () => {
+    expect(concatWithCondition('', '', FilterConnectionCondition.And)).toBe("/MarginCall/account=''");
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  test('returns right when left is empty', () => {
+    expect(concatWithCondition('', 'rightValue', FilterConnectionCondition.And)).toBe('rightValue');
   });
 
-  it('should apply filters correctly', async () => {
-    await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
-
-    expect(console.log).toHaveBeenCalledWith('Calling applySetFilter for key: key1');
-    expect(marginCallGridUtils.applySetFilter).toHaveBeenCalledWith(gridRef, 'key1', selectedMCFavorite.state.filterState.key1, expect.any(Object));
-    expect(gridRef.current.api.setFilterModel).toHaveBeenCalledWith(expect.any(Object));
+  test('returns left when right is empty', () => {
+    expect(concatWithCondition('leftValue', '', FilterConnectionCondition.And)).toBe('leftValue');
   });
 
-  it('should clear interval if all selected values found and interval exists', async () => {
-    jest.spyOn(global, 'clearInterval');
-
-    await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
-
-    expect(clearInterval).toHaveBeenCalledWith(applyFiltersIntervalId.current);
-    expect(applyFiltersIntervalId.current).toBeNull();
+  test('returns concatenated string with "and" when condition is And', () => {
+    expect(concatWithCondition('leftValue', 'rightValue', FilterConnectionCondition.And)).toBe('(leftValue) and (rightValue)');
   });
 
-  it('should not clear interval if not all selected values found', async () => {
-    marginCallGridUtils.applySetFilter.mockResolvedValueOnce(false);
-
-    await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
-
-    expect(gridRef.current.api.setFilterModel).toHaveBeenCalledWith(expect.any(Object));
-    expect(global.clearInterval).not.toHaveBeenCalled();
-    expect(applyFiltersIntervalId.current).not.toBeNull();
+  test('returns concatenated string with "or" when condition is Or', () => {
+    expect(concatWithCondition('leftValue', 'rightValue', FilterConnectionCondition.Or)).toBe('(leftValue) or (rightValue)');
   });
 
-  it('should handle errors gracefully', async () => {
-    marginCallGridUtils.applySetFilter.mockRejectedValue(new Error('Test error'));
+  test('handles non-empty strings and condition correctly', () => {
+    const left = 'leftString';
+    const right = 'rightString';
+    const condition = FilterConnectionCondition.Or;
+    expect(concatWithCondition(left, right, condition)).toBe('(leftString) or (rightString)');
+  });
 
-    await applyFilters(selectedMCFavorite, gridRef, applyFiltersIntervalId);
-
-    expect(console.error).toHaveBeenCalledWith('Error in applyFilters:', expect.any(Error));
+  test('handles complex strings and condition correctly', () => {
+    const left = 'left(Complex)String';
+    const right = 'right(Complex)String';
+    const condition = FilterConnectionCondition.And;
+    expect(concatWithCondition(left, right, condition)).toBe('(left(Complex)String) and (right(Complex)String)');
   });
 });
